@@ -9,21 +9,20 @@ spec:
         import_path: serve_app.main:whisper_ray
         runtime_env:
           working_dir: "https://github.com/Banner-Wang/whisepr-kuberay/archive/refs/heads/main.zip"
-          pip: 
-            - faster-whisper==1.0.3
-            - typer==0.12.3
-            - typing_extensions==4.12.2
-            - fastapi==0.111.0
-            - fastapi-cli==0.0.4
-          envVars:
+          pip: ["python-multipart==0.0.9","faster-whisper==1.0.3","typer==0.12.3","typing_extensions==4.12.2","fastapi==0.111.0","fastapi-cli==0.0.4"]
+          env_vars:
             MODEL_NAME: base
             MODEL_DEVICE: cpu
             MODEL_CPU_THREADS: "4"
-      deployments:
-        - name: FastAPIWrapper
-          num_replicas: 1
-          ray_actor_options:
-            num_cpus: 1
+        deployments:
+          - name: APIIngress
+            num_replicas: 1
+            ray_actor_options:
+              num_cpus: 1
+          - name: WhisperModelService
+            num_replicas: 1
+            ray_actor_options:
+              num_cpus: 1
   rayClusterConfig:
     rayVersion: '2.31.0' # should match the Ray version in the image of the containers
     ######################headGroupSpecs#################################
@@ -39,7 +38,7 @@ spec:
         spec:
           containers:
             - name: ray-head
-              image: rayproject/ray:2.31.0
+              image: rayproject/ray-ml:2.9.0
               resources:
                 limits:
                   cpu: 2
@@ -50,10 +49,8 @@ spec:
               ports:
                 - containerPort: 6379
                   name: gcs-server
-                - containerPort: 8265 # Ray dashboard
+                - containerPort: 8265
                   name: dashboard
-                - containerPort: 10001
-                  name: client
                 - containerPort: 8000
                   name: serve
     workerGroupSpecs:
@@ -71,8 +68,8 @@ spec:
         template:
           spec:
             containers:
-              - name: ray-worker # must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc'
-                image: rayproject/ray:2.31.0
+              - name: ray-worker
+                image: rayproject/ray-ml:2.9.0
                 lifecycle:
                   preStop:
                     exec:
